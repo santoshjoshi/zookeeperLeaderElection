@@ -3,10 +3,18 @@
 
 ## How to Run
 
-This program expects Zookeeper to be running at localhost on port 2181
 
-```
-gradle run
-```
+Start Zookeeper
 
 
+sh zkServer.sh start
+
+
+Running the Program
+gradle run -Pargs='NAME, localhost:2181'
+
+
+Libraries Being Used
+
+a) Apache Curator
+b) Apache Curator Receipes

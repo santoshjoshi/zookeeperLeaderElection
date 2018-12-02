@@ -2,7 +2,7 @@ package com.whiteboardtalks.election;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
@@ -25,9 +25,9 @@ import org.slf4j.LoggerFactory;
 public class LeaderListener extends LeaderSelectorListenerAdapter implements Closeable {
 	private final static Logger log = LoggerFactory.getLogger(LeaderListener.class);
 
-	private final AtomicInteger leaderCount = new AtomicInteger();
+	private final AtomicInteger leaderCount = new AtomicInteger(1);
 	private LeaderSelector leaderSelector;
-	// private CountDownLatch countDownLatch = new CountDownLatch(1);
+	private CountDownLatch countDownLatch = new CountDownLatch(1);
 	private Consumer<Boolean> consumer;
 	private String name;
 
@@ -58,26 +58,28 @@ public class LeaderListener extends LeaderSelectorListenerAdapter implements Clo
 	@Override
 	public void stateChanged(CuratorFramework client, ConnectionState newState) {
 		if ((newState == ConnectionState.SUSPENDED) || (newState == ConnectionState.LOST)) {
+			log.info("Leadership revoked from ``{}`` ", this.name);
+			countDownLatch.countDown();
 			consumer.accept(false);
+		} else if ((newState == ConnectionState.CONNECTED) || (newState == ConnectionState.RECONNECTED)) {
+			log.info("client `{}`. Attempting for leadership ``{}`` ",newState,  this.name);
+			countDownLatch = new CountDownLatch(1);
+			//leaderSelector.requeue();
 		}
 	}
 
 	@Override
 	public void takeLeadership(CuratorFramework client) throws Exception {
-		log.info("Leader is {} for {} time ", this.name, this.leaderCount.getAndIncrement());
-		consumer.accept(true);
-		// countDownLatch.await();
-		// we are now the leader. This method should not return until we want to
-		// relinquish leadership
+		log.info("Leader is ``{}`` for {} time ", this.name, this.leaderCount.getAndIncrement());
 
-		final int waitSeconds = (int) (10 * Math.random()) + 1;
 		try {
-			Thread.sleep(TimeUnit.SECONDS.toMillis(waitSeconds));
-		} catch (InterruptedException e) {
-			log.error(this.name + " was interrupted.");
-			Thread.currentThread().interrupt();
-		} finally {
-			log.info("{} relinquishing leadership", this.name);
+			new Thread(() -> {
+				consumer.accept(true);
+			}, "Leader-Child-Thread").start();
+		} catch (Exception e) {
+			log.error("Error starting thread, ", e.getMessage());
 		}
+		countDownLatch.await();
+		log.debug("{} is not a Leader anymore  ", this.name);
 	}
 }

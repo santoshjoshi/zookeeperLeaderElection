@@ -19,8 +19,20 @@ public class Main {
 
 	public static void main(String... args) {
 
-		System.setProperty("zkHosts", "localhost:2181");
-		String name = getRandomName();
+		String name = "";
+		if (args.length > 0) {
+			name = args[0].trim();
+		} else {
+			name = getRandomName();
+		}
+
+		if (args[1] != null && !"".equalsIgnoreCase(args[1])) {
+			System.setProperty("zkHosts", args[1].trim());
+		} else {
+			System.out.println("Please Run the program as follows");
+			System.out.println("gradle run -Pargs='NAME, localhost:2181'");
+			return;
+		}
 
 		log.info("leader election started, contender is {}", name);
 

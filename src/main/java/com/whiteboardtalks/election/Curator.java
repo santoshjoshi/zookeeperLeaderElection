@@ -22,6 +22,12 @@ public class Curator {
 
 	}
 
+	/**
+	 * Initializes the Curator Framework
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
 	public static CuratorFramework curatorFramework() throws Exception {
 
 		String zkConnectionString = System.getProperty("zkHosts");
@@ -29,6 +35,8 @@ public class Curator {
 
 		CuratorFrameworkFactory.Builder builder = CuratorFrameworkFactory.builder();
 		builder.connectString(zkConnectionString);
+		builder.sessionTimeoutMs(2000);
+		builder.connectionTimeoutMs(2000);
 		CuratorFramework curator = builder.retryPolicy(exponentialBackoffRetry()).build();
 
 		curator.start();
